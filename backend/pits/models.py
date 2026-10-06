@@ -39,3 +39,23 @@ class LiquorSample(models.Model):
     taken_at = models.DateTimeField(auto_now_add=True)
     ph = models.FloatField()
     operator = models.CharField(max_length=64, blank=True)
+
+
+class Badge(models.Model):
+    """工牌：一口坑现行未摘最多一张（见 Meta 约束）。"""
+
+    pit = models.ForeignKey(Pit, on_delete=models.CASCADE, related_name="badges")
+    number = models.PositiveIntegerField()
+    holder_name = models.CharField(max_length=64)
+    hung_at = models.DateTimeField(auto_now_add=True)
+    removed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["pit"],
+                condition=models.Q(removed_at__isnull=True),
+                name="one_current_badge_per_pit",
+            )
+        ]
+        ordering = ["-hung_at", "-id"]

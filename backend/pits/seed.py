@@ -1,4 +1,6 @@
-from pits.models import LiquorSample, Pit, User, Yard
+from django.utils import timezone
+
+from pits.models import Badge, LiquorSample, Pit, User, Yard
 
 
 def seed_demo() -> None:
@@ -25,3 +27,7 @@ def seed_demo() -> None:
         pit = Pit.objects.create(yard=yard, code=code, status=status, row=row, col=col)
         if ph is not None:
             LiquorSample.objects.create(pit=pit, ph=ph, operator="worker")
+    east1 = Pit.objects.get(yard=yard, code="东-1")
+    Badge.objects.create(pit=east1, number=101, holder_name="worker")
+    mid1 = Pit.objects.get(yard=yard, code="中-1")
+    Badge.objects.create(pit=mid1, number=102, holder_name="admin", removed_at=timezone.now())
