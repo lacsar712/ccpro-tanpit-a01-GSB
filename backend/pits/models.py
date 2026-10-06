@@ -1,5 +1,6 @@
 from django.contrib.auth.hashers import check_password, make_password
 from django.db import models
+from django.utils import timezone
 
 
 class User(models.Model):
@@ -39,3 +40,32 @@ class LiquorSample(models.Model):
     taken_at = models.DateTimeField(auto_now_add=True)
     ph = models.FloatField()
     operator = models.CharField(max_length=64, blank=True)
+
+
+class WorkBadge(models.Model):
+    """工牌：挂在坑上的现行牌最多一张，摘下时刻可空。"""
+
+    pit = models.ForeignKey(Pit, on_delete=models.CASCADE, related_name="badges")
+    number = models.PositiveIntegerField()
+    worker_name = models.CharField(max_length=64)
+    hung_at = models.DateTimeField(default=timezone.now)
+    removed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(number__gte=1), name="badge_number_positive"),
+            models.UniqueConstraint(
+                fields=["pit"],
+                condition=models.Q(removed_at__isnull=True),
+                name="uniq_current_badge_per_pit",
+            ),
+            models.UniqueConstraint(
+                fields=["number"],
+                condition=models.Q(removed_at__isnull=True),
+                name="uniq_current_badge_number",
+            ),
+        ]
+
+    @property
+    def current(self) -> bool:
+        return self.removed_at is None

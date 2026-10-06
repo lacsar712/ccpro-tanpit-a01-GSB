@@ -1,6 +1,6 @@
-"""鞣坑放液门槛：最近一次浸液酸碱度须在 3.5～5.0。"""
+"""鞣坑放液门槛：须挂本人现行工牌，且最近一次浸液酸碱度在 3.5～5.0。"""
 
-from pits.models import Pit
+from pits.models import Pit, User, WorkBadge
 
 MIN_PH = 3.5
 MAX_PH = 5.0
@@ -15,12 +15,21 @@ def latest_ph(pit: Pit) -> float | None:
     return None if sample is None else sample.ph
 
 
-def assert_can_set_status(pit: Pit, new_status: str) -> None:
+def current_badge(pit: Pit) -> WorkBadge | None:
+    return pit.badges.filter(removed_at__isnull=True).order_by("-hung_at", "-id").first()
+
+
+def assert_can_set_status(pit: Pit, new_status: str, user: User) -> None:
     allowed = {Pit.STATUS_FILL, Pit.STATUS_TANNING, Pit.STATUS_DRAINED}
     if new_status not in allowed:
         raise RuleError(f"无效状态：{new_status}")
     if new_status != Pit.STATUS_DRAINED:
         return
+    badge = current_badge(pit)
+    if badge is None:
+        raise RuleError("该坑未挂工牌，不能放液")
+    if badge.worker_name != user.username:
+        raise RuleError(f"该坑现行工牌属于「{badge.worker_name}」，与当前登录人不符，不能放液")
     ph = latest_ph(pit)
     if ph is None:
         raise RuleError("该坑尚无浸液酸碱记录，不能放液")
